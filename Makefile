@@ -13,7 +13,7 @@ SRC_DIR = src
 OBJ_DIR = obj
 
 # Program
-PROG = ipk-14-scan
+PROG = ipk-l4-scan
 
 # Source files
 SRC = $(wildcard $(SRC_DIR)/*.cpp)
