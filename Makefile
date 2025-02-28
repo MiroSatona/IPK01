@@ -10,31 +10,31 @@ FLAGS = -std=c++20 -Wall -Wextra -Wpedantic
 
 # Directories
 SRC_DIR = src
-OBJ_DIR = obj
 
 # Program
 PROG = ipk-l4-scan
 
 # Source files
 SRC = $(wildcard $(SRC_DIR)/*.cpp)
-OBJ = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC))
+OBJ = $(SRC:.cpp=.o) 
 
 # Compile 
 $(PROG): $(OBJ)
 	@$(CPP) $(FLAGS) -o $(PROG) $(OBJ)
 
-$(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp | $(OBJ_DIR)
+%.o: %.cpp
 	@$(CPP) $(FLAGS) -c $< -o $@
 
-# Objects directory
-$(OBJ_DIR):
-	@mkdir -p $(OBJ_DIR)
-	
 # Run program
 run:
 	@./$(PROG)
+
+# Run tests for parse invalid input
+run_test_parse:
+	@cd tests/parse && chmod +x parse.sh && ./parse.sh 
+
 # Clean objects and program
 clean:
-	@rm -rf $(PROG) $(OBJ_DIR)
+	@rm -f $(PROG) $(OBJ)
 
 .PHONY: clean run
