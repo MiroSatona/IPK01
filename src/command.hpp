@@ -33,7 +33,7 @@ class Command{
  * This class is derived from the Command class. It overrides the performExecute method and prints the help message.
  */
 class HelpCommand: public Command{
-    private:
+    public:
         /**
          * @brief Preforms the help command
          * 
@@ -48,7 +48,7 @@ class HelpCommand: public Command{
  * This class is derived from the Command class. It overrides the performExecute method and prints the interfaces.
  */
 class InterfaceCommand: public Command{
-    private:
+    public:
         /**
          * @brief Preforms the interface command
          * 
