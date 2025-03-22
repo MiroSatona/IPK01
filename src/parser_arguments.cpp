@@ -12,8 +12,9 @@ ParseArguments::ParseArguments(int argCount, char* args[]){
     this->parsedUdpPorts = "";
     this->timeout = "";
     this->parse(argCount, args);
-    this->scanParams = ScannerParams(this->parsedInterface, this->parsedDomain, this->parsedTcpPorts, this->parsedUdpPorts, this->timeout);
-
+    if(!this->helpOnly && !this->interfaceOnly){
+        this->scanParams = ScannerParams(this->parsedInterface, this->parsedDomain, this->parsedTcpPorts, this->parsedUdpPorts, this->timeout);
+    }
 }
 
 
@@ -49,7 +50,7 @@ ScannerParams ParseArguments::getScanParams(){
     return this->scanParams;
 }
 
-void ParseArguments::parse(int argCount, char* args[]){
+void ParseArguments::parse(int argCount, char*  args[]){
 
     if ((argCount == 2 && (std::string(args[1]) == "-h" || std::string(args[1]) == "--help"))){
         this->helpOnly = true;

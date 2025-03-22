@@ -7,7 +7,8 @@
 
 class ParseArguments{
     public:
-        ParseArguments(int argCount, char* args[]);
+
+        ParseArguments(int argCount, char*  args[]);
         bool isHelpOnly();
         bool isInterfaceOnly();
 
@@ -30,7 +31,7 @@ class ParseArguments{
         bool helpOnly;
         bool interfaceOnly;
 
-        void parse(int argCount, char* args[]);
+        void parse(int argCount, char*  args[]);
 };
 
 
