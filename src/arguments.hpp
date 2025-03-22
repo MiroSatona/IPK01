@@ -48,6 +48,8 @@ class Arguments{
         int getTimeout();
         std::unordered_set<std::string> getIp4Addr();
         std::unordered_set<std::string> getIp6Addr();
+        std::string getSrcIpv4();
+        std::string getSrcIpv6();
 
     private:
 
@@ -60,6 +62,8 @@ class Arguments{
         int timeout;
         std::vector<int> tcpPorts;
         std::vector<int>  udpPorts;
+        std::string srcIpv4;
+        std::string srcIpv6;
       
         // Private methods for validate arguments or convert them
         std::vector<int> convertPorts(std::string ports);   

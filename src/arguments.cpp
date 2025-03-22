@@ -49,6 +49,14 @@ std::string Arguments::getDomainName(){
     return this->domainName; 
 }
 
+std::string Arguments::getSrcIpv4(){ 
+    return this->srcIpv4; 
+}
+
+std::string Arguments::getSrcIpv6(){ 
+    return this->srcIpv6; 
+}
+
 std::vector<int> Arguments::convertPorts(std::string convertPorts){
     std::regex port("^(?:6553[0-5]|655[0-2]\\d|65[0-4]\\d{2}|6[0-4]\\d{3}|[1-5]?\\d{1,4})$");
     std::regex ports("^(?:6553[0-5]|655[0-2]\\d|65[0-4]\\d{2}|6[0-4]\\d{3}|[1-5]?\\d{1,4})(?:,(?:6553[0-5]|655[0-2]\\d|65[0-4]\\d{2}|6[0-4]\\d{3}|[1-5]?\\d{1,4}))*$");
@@ -96,22 +104,43 @@ void Arguments::validateInterface(){
         return;
     }
         
-    
-    struct ifaddrs *listIntefaces;
-    if (getifaddrs(&listIntefaces) == -1) {
+    struct ifaddrs *listInterfaces, *interface;
+    if (getifaddrs(&listInterfaces) == -1) {
+        perror("getifaddrs failed");
         return;
     }
 
     bool found = false;
-    for (struct ifaddrs *interface = listIntefaces; interface != nullptr; interface = interface->ifa_next) {
-        if (interface->ifa_name && this->interface == interface->ifa_name && (interface->ifa_flags & IFF_UP)){
-            found = true;
+    for (interface = listInterfaces; interface != nullptr; interface = interface->ifa_next) {
+        if (interface->ifa_addr == nullptr) continue;
+        if (interface->ifa_flags & IFF_UP && interface->ifa_name == this->interface) {
+            if (interface->ifa_addr->sa_family == AF_INET) {
+                struct sockaddr_in *ipv4 = reinterpret_cast<struct sockaddr_in *>(interface->ifa_addr);
+                char ipv[INET_ADDRSTRLEN];
+                inet_ntop(interface->ifa_addr->sa_family, &(ipv4->sin_addr), ipv, INET_ADDRSTRLEN);
+                this->srcIpv4 = std::string(ipv);
+                found = true;
+                break;
+            } else if (interface->ifa_addr->sa_family == AF_INET6) {
+                struct sockaddr_in6 *ipv6 = reinterpret_cast<struct sockaddr_in6 *>(interface->ifa_addr);
+                char ipv[INET6_ADDRSTRLEN];
+                inet_ntop(interface->ifa_addr->sa_family, &(ipv6->sin6_addr), ipv, INET6_ADDRSTRLEN);
+                this->srcIpv6 = std::string(ipv);
+
+                found = true;
             break;
+            }
+        if(!this->srcIpv4.empty() && !this->srcIpv6.empty()) break;
+        
         }
+
     }
 
-    freeifaddrs(listIntefaces);
-    if(!found) throw std::invalid_argument("Interface is invalid or is not active!");
+    freeifaddrs(listInterfaces); // Free allocated memory
+
+    if (!found) {
+        std::cerr << "Error: Interface ' not found or has no IP address." << std::endl;
+    }
     return;
 }
 
