@@ -2,6 +2,8 @@
 #include "parser_arguments.hpp"
 #include "command.hpp"
 #include "scanner_params.hpp"
+#include "scanner.hpp"
+
 
 int main(int argc, char *argv[])
 {
@@ -26,7 +28,23 @@ int main(int argc, char *argv[])
       // Get scan parameters
       ScannerParams scanParams = args.getScanParams();
 
-      
+      // Set what to scan and scan
+      if (!scanParams.getTcpPorts().empty() && !scanParams.getIp4AddrDest().empty()){
+         TcpIpv4Scanner tcpIpv4(scanParams);
+         tcpIpv4.scan();
+      }
+      if (!scanParams.getTcpPorts().empty() && !scanParams.getIp6AddrDest().empty()){
+         TcpIpv6Scanner tcpIpv6(scanParams);
+         tcpIpv6.scan();
+      }
+      if (!scanParams.getUdpPorts().empty() && !scanParams.getIp4AddrDest().empty()){
+         UdpIpv4Scanner udpIpv4(scanParams);
+         udpIpv4.scan();
+      }
+      if (!scanParams.getUdpPorts().empty() && !scanParams.getIp6AddrDest().empty()){
+         UdpIpv6Scanner udpIpv6(scanParams);
+         udpIpv6.scan();
+      }
 
    }
    catch(std::exception &e){
