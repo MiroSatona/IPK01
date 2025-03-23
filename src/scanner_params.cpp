@@ -55,6 +55,14 @@ std::vector<int> ScannerParams::getUdpPorts(){
     return this->udpPorts;
 }
 
+std::string ScannerParams::getInterfaceIpv4(){
+    return this->interfaceIpv4;
+}
+
+std::string ScannerParams::getInterfaceIpv6(){
+    return this->interfaceIpv6;
+}
+
 
 std::vector<int> ScannerParams::convertPorts(std::string convertPorts){
 
@@ -99,6 +107,7 @@ void ScannerParams::setPorts(std::string parsedTcpPorts, std::string parsedUdpPo
     this->udpPorts = this->convertPorts(parsedUdpPorts);
 
     if((!parsedTcpPorts.empty() && this->tcpPorts.empty()) || (!parsedUdpPorts.empty() && this->udpPorts.empty())){
+        
         throw std::invalid_argument("Invalid ports were pasted!\n");
     }
 }
