@@ -69,15 +69,15 @@ void ParseArguments::parse(int argCount, char*  args[]){
             this->parsedInterface = args[index + 1];
             index += 2;
         }
-        else if ((arg == "-u" || arg == "--pu") && this->parsedUdpPorts.empty() && index + 1 < argCount && !this->parsedUdpPorts.empty()) {
+        else if ((arg == "-u" || arg == "--pu") && this->parsedUdpPorts.empty() && index + 1 < argCount) {
             this->parsedUdpPorts = args[index + 1];
             index += 2;
         }
-        else if ((arg == "-t" || arg == "--pt") && this->parsedTcpPorts.empty() && index + 1 < argCount && !this->parsedTcpPorts.empty()) {
+        else if ((arg == "-t" || arg == "--pt") && this->parsedTcpPorts.empty() && index + 1 < argCount) {
             this->parsedTcpPorts = args[index + 1];
             index += 2;
         }
-        else if ((arg == "-w" || arg == "--wait") && this->timeout.empty() && index + 1 < argCount && !this->timeout.empty()) {
+        else if ((arg == "-w" || arg == "--wait") && this->timeout.empty() && index + 1 < argCount) {
             this->timeout = args[index + 1];
             index += 2;
         }
