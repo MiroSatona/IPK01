@@ -32,7 +32,7 @@ public:
     TcpIpv6Scanner(const ScannerParams& params);
     void scan() override;
 };
-/* 
+
 class UdpIpv4Scanner : public Scanner {
 public:
     UdpIpv4Scanner(const ScannerParams& params);
@@ -44,5 +44,5 @@ public:
     UdpIpv6Scanner(const ScannerParams& params);
     void scan() override;
 };
-*/
+
 #endif // SCANNER_HPP

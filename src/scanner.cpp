@@ -11,16 +11,19 @@
 #include <fcntl.h>
 #include <chrono>
 #include <netinet/ip6.h> 
+#include <netinet/udp.h>
+#include <netinet/ip_icmp.h>
+#include <netinet/icmp6.h>
+
 
 
 
 Scanner::Scanner(const ScannerParams& scanParams) : scanParams(scanParams) {}
 TcpIpv4Scanner::TcpIpv4Scanner(const ScannerParams& params): Scanner(params) {}
 TcpIpv6Scanner::TcpIpv6Scanner(const ScannerParams& params): Scanner(params) {}
-/* 
 UdpIpv4Scanner::UdpIpv4Scanner(const ScannerParams& params): Scanner(params) {}
 UdpIpv6Scanner::UdpIpv6Scanner(const ScannerParams& params): Scanner(params) {}
-*/
+
 
 
 unsigned short Scanner::calculateChecksum(const char* pdu, size_t dataLen) {
@@ -322,3 +325,282 @@ void TcpIpv6Scanner::scan() {
     this->closeEpoll(epollFd);
 }
 
+void UdpIpv4Scanner::scan() {
+    int srcPort = 50000;
+    int fdSock = this->createSocket(AF_INET, IPPROTO_UDP);
+    
+
+    int icmp = socket(AF_INET, SOCK_RAW, IPPROTO_ICMP);
+    if (icmp == -1) {
+        close(fdSock);
+        throw std::runtime_error("Could not create ICMP socket!");
+    }
+
+    if(setsockopt(icmp, SOL_SOCKET, SO_BINDTODEVICE, scanParams.getInterfaceName().c_str(), scanParams.getInterfaceName().size())){
+        close(fdSock);
+        throw std::runtime_error("Could not bind socket to interface!");
+
+    }
+    int epollFd = this->createEpoll();
+    struct epoll_event ev, events[MAX_EVENTS];
+    ev.events = EPOLLIN;
+    ev.data.fd = fdSock;
+    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, icmp, &ev) == -1) {
+        close(fdSock);
+        close(epollFd);
+        throw std::runtime_error("Could not add socket to epoll!");
+    }
+    std::cout << "Interface: " << scanParams.getInterfaceIpv4() << std::endl;   
+    for (std::string dstIpv4 : scanParams.getIp4AddrDest()) {
+        for (int port : scanParams.getUdpPorts()) {
+            struct udphdr udpHeader;
+            memset(&udpHeader, 0, sizeof(udphdr));
+            udpHeader.source = htons(srcPort);
+            udpHeader.dest = htons(port);
+            udpHeader.len = htons(sizeof(struct udphdr));
+            
+
+            struct checkSumPseudoHdr {
+                uint32_t srcAddr;
+                uint32_t dstAddr;
+                uint8_t zero;
+                uint8_t protocol;
+                uint16_t udpLength;
+            };
+
+            struct checkSumPseudoHdr pseudoHdr;
+            memset(&pseudoHdr, 0, sizeof(struct checkSumPseudoHdr));
+            pseudoHdr.srcAddr = inet_addr(scanParams.getInterfaceIpv4().c_str());
+            pseudoHdr.dstAddr = inet_addr(dstIpv4.c_str());
+            pseudoHdr.protocol = IPPROTO_UDP;
+            pseudoHdr.zero = 0;
+            pseudoHdr.udpLength = htons(sizeof(struct udphdr));
+
+            size_t datagramLength = sizeof(struct udphdr) + sizeof(struct checkSumPseudoHdr);
+            std::vector<char> datagram(datagramLength);
+            memcpy(datagram.data(), &pseudoHdr, sizeof(struct checkSumPseudoHdr));
+            memcpy(datagram.data() + sizeof(struct checkSumPseudoHdr), &udpHeader, sizeof(struct udphdr));
+            udpHeader.check = this->calculateChecksum(datagram.data(), datagramLength);
+
+            struct sockaddr_in dstAddr;
+            memset(&dstAddr, 0, sizeof(dstAddr));
+            dstAddr.sin_family = AF_INET;
+            dstAddr.sin_port = htons(port);
+            dstAddr.sin_addr.s_addr = inet_addr(dstIpv4.c_str());
+            bool getIcmp = false;
+
+            
+            if (sendto(fdSock, (struct udphdr*) &udpHeader, sizeof(struct udphdr), 0, (struct sockaddr*)&dstAddr, sizeof(dstAddr)) == -1) {
+                close(fdSock);
+                close(epollFd);
+                close(icmp);
+                throw std::runtime_error("Could not send packet!");
+                
+            }
+
+            int timeout = scanParams.getTimeout();
+            auto startTime = std::chrono::steady_clock::now();
+            
+            while(!getIcmp && timeout > 0){
+                int ready = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
+                auto now = std::chrono::steady_clock::now();
+                int delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+                timeout -= delta;
+                startTime = now;
+
+                if (ready == -1) {
+                    close(fdSock);
+                    close(epollFd);
+                    throw std::runtime_error("epoll_wait failed!");
+                }else if(ready == 0){
+                    break;
+                }
+             
+                char buffer[MAX_BUFFER_SIZE];
+                int received = recvfrom(icmp, buffer, sizeof(buffer), 0, nullptr, nullptr);
+                if (received == -1) continue;
+
+                
+                struct icmphdr* icmpHeader = (struct icmphdr*)(buffer + sizeof(struct iphdr));
+                struct iphdr* ipHeader = (struct iphdr*)(buffer);
+                unsigned char* innerIpStart = (unsigned char*)icmpHeader + sizeof(struct icmphdr);
+                struct iphdr* innerIp = (struct iphdr*)innerIpStart;
+                struct udphdr* innerUdp = (struct udphdr*)(innerIpStart + innerIp->ihl * 4);
+
+                char srcIp[INET_ADDRSTRLEN], dstIp[INET_ADDRSTRLEN];
+                inet_ntop(AF_INET, &ipHeader->saddr, dstIp, sizeof(srcIp));
+                inet_ntop(AF_INET, &ipHeader->daddr, srcIp, sizeof(dstIp));
+
+                bool matchAddr = dstIpv4 == std::string(dstIp) && scanParams.getInterfaceIpv4() == std::string(srcIp);
+                bool matchPort = ntohs(innerUdp->dest) == port && ntohs(innerUdp->source) == srcPort;
+                bool matchIcmp = icmpHeader->type == ICMP_UNREACH_PORT && icmpHeader->code == ICMP_UNREACH_PORT;
+
+                if(matchAddr && matchPort && matchIcmp){
+                    getIcmp = true;
+                    std::cout << dstIpv4 << " " << port << " " << "udp closed" << std::endl;
+                    break;
+                }
+
+            }
+
+            if(!getIcmp){
+                std::cout << dstIpv4 << " " << port << " " << "udp open" << std::endl;
+            }
+
+            if (srcPort < 60000) srcPort++;
+            else srcPort = 50000;
+            
+        }
+    }
+    this->closeSocket(fdSock);
+    this->closeEpoll(epollFd);
+    this->closeSocket(icmp);
+}
+
+void UdpIpv6Scanner::scan() {
+    int srcPort = 50000;
+    int fdSock = this->createSocket(AF_INET6, IPPROTO_UDP);
+    
+
+    int icmp = socket(AF_INET6, SOCK_RAW, IPPROTO_ICMPV6);
+    if (icmp == -1) {
+        close(fdSock);
+        throw std::runtime_error("Could not create ICMP socket!");
+    }
+
+    if(setsockopt(icmp, SOL_SOCKET, SO_BINDTODEVICE, scanParams.getInterfaceName().c_str(), scanParams.getInterfaceName().size())){
+        close(fdSock);
+        throw std::runtime_error("Could not bind socket to interface!");
+
+    }
+
+    int epollFd = this->createEpoll();
+    struct epoll_event ev, events[MAX_EVENTS];
+    ev.events = EPOLLIN;
+    ev.data.fd = fdSock;
+    if (epoll_ctl(epollFd, EPOLL_CTL_ADD, icmp, &ev) == -1) {
+        close(fdSock);
+        close(epollFd);
+        throw std::runtime_error("Could not add socket to epoll!");
+    }
+    std::cout << "Interface: " << scanParams.getInterfaceIpv4() << std::endl;   
+    for (std::string dstIpv6 : scanParams.getIp6AddrDest()) {
+        for (int port : scanParams.getUdpPorts()) {
+            struct udphdr udpHeader;
+            memset(&udpHeader, 0, sizeof(udphdr));
+            udpHeader.source = htons(srcPort);
+            udpHeader.dest = htons(port);
+            udpHeader.len = htons(sizeof(struct udphdr));
+            
+
+            struct checkSumPseudoHdrIpv6 {
+                struct in6_addr src;
+                struct in6_addr dst;
+                uint32_t length;
+                uint8_t zero[3];
+                uint8_t next_header;
+            };
+
+            struct checkSumPseudoHdrIpv6 pseudoHdr;
+            memset(&pseudoHdr, 0, sizeof(pseudoHdr));
+            if (inet_pton(AF_INET6, scanParams.getInterfaceIpv6().c_str(), &pseudoHdr.src) != 1) {
+                // TODO: Handle error
+                continue;
+            }
+            if (inet_pton(AF_INET6, dstIpv6.c_str(), &pseudoHdr.dst) != 1) {
+                //TODO: 
+                continue;
+            }
+            pseudoHdr.length = htonl(sizeof(struct udphdr));
+            pseudoHdr.next_header = IPPROTO_UDP;
+
+            size_t datagramLength = sizeof(struct udphdr) + sizeof(struct checkSumPseudoHdrIpv6);
+            std::vector<char> datagram(datagramLength);
+            memcpy(datagram.data(), &pseudoHdr, sizeof(struct checkSumPseudoHdrIpv6));
+            memcpy(datagram.data() + sizeof(struct checkSumPseudoHdrIpv6), &udpHeader, sizeof(struct udphdr));
+            udpHeader.check = this->calculateChecksum(datagram.data(), datagramLength);
+
+            struct sockaddr_in6 dstAddr;
+            memset(&dstAddr, 0, sizeof(dstAddr));
+            dstAddr.sin6_family = AF_INET6;
+            //dstAddr.sin6_port = htons(port);
+            if (inet_pton(AF_INET6, dstIpv6.c_str(), &dstAddr.sin6_addr) != 1) {
+                //perror("inet_pton (sendto addr) failed"); TODO: Handle error
+                continue;
+            }
+            bool getIcmp = false;
+
+            
+            if (sendto(fdSock, (struct udphdr*) &udpHeader, sizeof(struct udphdr), 0, (struct sockaddr*)&dstAddr, sizeof(dstAddr)) == -1) {
+                close(fdSock);
+                close(epollFd);
+                close(icmp);
+                throw std::runtime_error("Could not send packet!");
+                
+            }
+
+            int timeout = scanParams.getTimeout();
+            auto startTime = std::chrono::steady_clock::now();
+            
+            while (!getIcmp && timeout > 0) {
+                int ready = epoll_wait(epollFd, events, MAX_EVENTS, timeout);
+                auto now = std::chrono::steady_clock::now();
+                int delta = std::chrono::duration_cast<std::chrono::milliseconds>(now - startTime).count();
+                timeout -= delta;
+                startTime = now;
+            
+                if (ready == -1) {
+                    close(fdSock);
+                    close(epollFd);
+                    throw std::runtime_error("epoll_wait failed!");
+                } else if (ready == 0) {
+                    break;
+                }
+            
+                char buffer[MAX_BUFFER_SIZE];
+                int received = recvfrom(icmp, buffer, sizeof(buffer), 0, nullptr, nullptr);
+                if (received == -1) continue;
+            
+                uint8_t icmpType = buffer[0];
+                uint8_t icmpCode = buffer[1];
+            
+                // payload = original IPv6 header + UDP header
+                unsigned char* innerData = (unsigned char*)(buffer + 8); // 8 bytes ICMPv6 header
+                struct in6_addr* origSrcIp = (struct in6_addr*)(innerData + 8);  // Source IP in IPv6 header
+                struct in6_addr* origDstIp = (struct in6_addr*)(innerData + 24); // Dest IP in IPv6 header
+            
+                struct udphdr* innerUdp = (struct udphdr*)(innerData + 40); // after IPv6 header
+            
+                uint16_t udpSrcPort = ntohs(innerUdp->source);
+                uint16_t udpDstPort = ntohs(innerUdp->dest);
+            
+                // Convert to string for comparison
+                char srcAddrStr[INET6_ADDRSTRLEN], dstAddrStr[INET6_ADDRSTRLEN];
+                inet_ntop(AF_INET6, origSrcIp, srcAddrStr, sizeof(srcAddrStr));
+                inet_ntop(AF_INET6, origDstIp, dstAddrStr, sizeof(dstAddrStr));
+            
+                bool matchPorts = (udpSrcPort == srcPort && udpDstPort == port);
+                bool matchIcmp = (icmpType == 1 && icmpCode == 4);
+                bool matchIps = (scanParams.getInterfaceIpv6() == std::string(srcAddrStr) &&
+                                 dstIpv6 == std::string(dstAddrStr));
+            
+                if (matchPorts && matchIcmp && matchIps) {
+                    getIcmp = true;
+                    std::cout << dstIpv6 << " " << port << " udp closed" << std::endl;
+                }
+            }
+            
+
+            if(!getIcmp){
+                std::cout << dstIpv6 << " " << port << " " << "udp open" << std::endl;
+            }
+
+            if (srcPort < 60000) srcPort++;
+            else srcPort = 50000;
+            
+        }
+    }
+    this->closeSocket(fdSock);
+    this->closeEpoll(epollFd);
+    this->closeSocket(icmp);
+}
