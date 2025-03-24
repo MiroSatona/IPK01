@@ -132,13 +132,12 @@ void ScannerParams::setInterfaceIpv(){
                 char ipv[INET_ADDRSTRLEN];
                 inet_ntop(interface->ifa_addr->sa_family, &(ipv4->sin_addr), ipv, INET_ADDRSTRLEN);
                 this->interfaceIpv4 = std::string(ipv);
-                break;
+
             } else if (interface->ifa_addr->sa_family == AF_INET6) {
                 struct sockaddr_in6 *ipv6 = (struct sockaddr_in6 *)(interface->ifa_addr);
                 char ipv[INET6_ADDRSTRLEN];
                 inet_ntop(interface->ifa_addr->sa_family, &(ipv6->sin6_addr), ipv, INET6_ADDRSTRLEN);
                 this->interfaceIpv6 = std::string(ipv);
-            break;
             }
         if(!this->interfaceIpv4.empty() && !this->interfaceIpv6.empty()) break;
         }
@@ -160,9 +159,6 @@ void ScannerParams::setAddrsDest(std::string domain){
     
     if(retVal == EAI_NONAME) throw std::invalid_argument("Invalid domain name was pasted!");
     else if(retVal || listOfAddrInfo == nullptr) throw std::invalid_argument("Internal error of getaddrinfo!");
-
-
-   
 
         void* addr = nullptr;
         for (struct addrinfo* element = listOfAddrInfo; element != nullptr; element = element->ai_next) {
