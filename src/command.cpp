@@ -1,6 +1,7 @@
 /**
 * @file command.cpp
 * @author Martin Zůbek, x253206
+* @date 25.3. 2025
 * @brief Implementation file for the Command pattern
 */
 
@@ -12,6 +13,7 @@
 #include <unordered_set>
 
 // Performs the help command
+
 void HelpCommand::performExecute() {
     // Help message
     std::string helpMessage =
@@ -41,6 +43,7 @@ void HelpCommand::performExecute() {
 }
 
 // Preforms the interface command
+
 void InterfaceCommand::performExecute(){
     // Prepare list of active interfaces
     struct ifaddrs *listInterfaces;
@@ -58,11 +61,7 @@ void InterfaceCommand::performExecute(){
         }
     }
     // Print active interfaces or message if no active interfaces were found
-    if(interfaces.empty()){
-        std::cout << "No ative interfaces found!" << std::endl;
-    }
-    else{
-        std::cout << "List of active interfaces: " << std::endl;
+    if(!interfaces.empty()){
         for (std::string intf : interfaces) {
             std::cout << intf << std::endl;
         }
