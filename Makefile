@@ -33,7 +33,9 @@ $(OBJ_DIR):
 # Run program
 run:
 	@./$(PROG)
-
+# Run tests for invalid input
+test_input:
+	@ cd tests && cd parse && chmod +x parse.sh && ./parse.sh
 # Clean objects and program
 clean:
 	@rm -rf $(PROG) $(OBJ_DIR)
