@@ -21,8 +21,8 @@
  * @brief Class for parsing the input arguments
  * 
  * This class is used for parsing the input arguments, and storing them for the scanner.
- * This class is composed on class ParseArguments and aggregated to class Scanner.
- */
+ * This class is and aggregated to class ParseArguments and composed to the class Scanner.
+ *  */
 class ScannerParams{
 
     public:
