@@ -7,10 +7,12 @@
 #define MAX_RETRIES 2
 #define MAX_BUFFER_SIZE 4096
 #define MAX_EVENTS 1024
+#define DEFAULT_SOURCE_PORT 50000
+#define MAX_SOURCE_PORT 60000
 class Scanner{
     public:
-        virtual void scan() = 0;
         Scanner(const ScannerParams &scanParams);
+        virtual void scan() = 0;
     protected:
         unsigned short calculateChecksum(const char* pdu, size_t dataLen);
         int createSocket(int ipvType, int protocol);
