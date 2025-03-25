@@ -184,6 +184,7 @@ void ScannerParams::setAddrsDest(std::string domain){
     // Get the list of addresses by the domain
     struct addrinfo hints, *listOfAddrInfo;
     memset(&hints, 0, sizeof(hints));
+    hints.ai_family = AF_UNSPEC;
     int retVal = getaddrinfo(domain.c_str(), nullptr, &hints, &listOfAddrInfo);
     
     // Check the return value of getaddrinfo -> NONAME <=> invalid domain name or internal error
