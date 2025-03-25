@@ -1,3 +1,9 @@
+/**
+ * @file scanner.cpp
+ * @name Martin Zůbek, x253206
+ * @date 25.3. 2025
+ * @brief Implementation of classes for scanning ports and methods for checksum calculation, creating socket and epoll instance, closing socket and epoll instance.
+ */
 #include "scanner.hpp"
 #include "pseudo_headers.hpp"
 #include <iostream>
@@ -16,8 +22,7 @@
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp6.h>
 
-
-
+// Constructor of scanners
 
 Scanner::Scanner(const ScannerParams& scanParams) : scanParams(scanParams) {}
 TcpIpv4Scanner::TcpIpv4Scanner(const ScannerParams& params): Scanner(params) {}
@@ -25,48 +30,63 @@ TcpIpv6Scanner::TcpIpv6Scanner(const ScannerParams& params): Scanner(params) {}
 UdpIpv4Scanner::UdpIpv4Scanner(const ScannerParams& params): Scanner(params) {}
 UdpIpv6Scanner::UdpIpv6Scanner(const ScannerParams& params): Scanner(params) {}
 
-
+// Method for calculating checksum
 
 unsigned short Scanner::calculateChecksum(const char* pdu, size_t dataLen) {
+    // Checksum
     unsigned long checksum = 0;
+    // Offset
     size_t offset = 0;
-
+    // Calculate checksum
     while (offset < dataLen-1){
         checksum += *(unsigned short *)&pdu[offset];
+        // 16 bits -> 2 bytes
         offset += 2;
     }
-
+    // If data length is odd, add last byte
     if (dataLen%2) checksum += (unsigned char) pdu[offset];
+    // Add carry
     while (checksum >> 16) checksum = (checksum & 0xFFFF) + (checksum >> 16);
-
+    // Return checksum
     return (unsigned short) ~checksum;
 }
 
+// Method for creating socket and bind socket, wich socket is independent on IP version and protocol
+
 int Scanner::createSocket(int ipvType, int protocol) {
+    // Create socket
     int fdSock = socket(ipvType, SOCK_RAW, protocol);
     if (fdSock == -1) return -1;
-
+    // Bind socket to interface
     if(setsockopt(fdSock, SOL_SOCKET, SO_BINDTODEVICE, scanParams.getInterfaceName().c_str(), scanParams.getInterfaceName().size()) == -1){
         close(fdSock);
         return -1;
     }
-        
-    
+
     return fdSock;
 }
+
+// Method for creating epoll instance
 
 int Scanner::createEpoll() {
     int epollFd = epoll_create1(0);
     return epollFd;
 }
 
+// Method for closing socket
+
 void Scanner::closeSocket(int fdSock) {
     close(fdSock);
 }
 
+// Method for closing epoll instance
+
 void Scanner::closeEpoll(int epollFd) {
     close(epollFd);
 }
+
+
+// Methods for scanning ports -> TCP IPv4, TCP IPv6, UDP IPv4, UDP IPv6
 
 void TcpIpv4Scanner::scan() {
     // Source port
