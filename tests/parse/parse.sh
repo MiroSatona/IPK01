@@ -15,7 +15,7 @@ test_program_invalid() {
     output=$( "$FILE" "$@" 2>&1 )
     rc=$?
 
-    if [[ $rc -eq 1 && "$output" == *"Error: Invalid input was pasted"* ]]; then
+    if [[ $rc -eq 1 && "$output" == *"Error: Invalid input was pasted!"* ]]; then
         echo -e "${GREEN}PASSED${NC}"
     else
         echo -e "${RED}FAILED${NC}"
@@ -29,7 +29,7 @@ test_program_invalid() {
 # Testing invalid inputs
 test_program_invalid "TEST01: ./ipk-l4-scan --interface eth0" --interface eth0
 test_program_invalid "TEST02: ./ipk-l4-scan example.com" example.com
-test_program_invalid "TEST03: ./ipk-l4-scan --martinzubekjenejhezci 10" --martinzubekjenejhezci 10
+test_program_invalid "TEST03: ./ipk-l4-scan --ipk 10" --ipk 10
 test_program_invalid "TEST04: ./ipk-l4-scan --pu 53" --pu 53
 test_program_invalid "TEST05: ./ipk-l4-scan --pu 53 -u 45" --pu 53 -u 45
 test_program_invalid "TEST06: ./ipk-l4-scan --interface todo 127.0.0.1 --wait 10 --pt 80,443 --pu 53,123" --interface todo 127.0.0.1 --wait 10 --pt 80,443 --pu 53,123
