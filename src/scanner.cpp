@@ -527,8 +527,18 @@ void UdpIpv4Scanner::scan() {
                 struct iphdr* innerIp = (struct iphdr*)innerIpStart;
                 struct udphdr* innerUdp = (struct udphdr*)(innerIpStart + innerIp->ihl * 4);
                 char srcIp[INET_ADDRSTRLEN], dstIp[INET_ADDRSTRLEN];
-                inet_ntop(AF_INET, &ipHeader->saddr, dstIp, sizeof(srcIp));
-                inet_ntop(AF_INET, &ipHeader->daddr, srcIp, sizeof(dstIp));
+                if(inet_ntop(AF_INET, &ipHeader->saddr, dstIp, sizeof(srcIp)) == nullptr){
+                    this->closeSocket(fdSock);
+                    this->closeEpoll(epollFd);
+                    this->closeSocket(icmp);
+                    throw std::runtime_error("Inet_ntop failed!");
+                }
+                if(inet_ntop(AF_INET, &ipHeader->daddr, srcIp, sizeof(dstIp)) == nullptr){
+                    this->closeSocket(fdSock);
+                    this->closeEpoll(epollFd);
+                    this->closeSocket(icmp);
+                    throw std::runtime_error("Inet_ntop failed!");
+                }
 
                 // Check validity of received packet
                 bool matchAddr = dstIpv4 == std::string(dstIp) && scanParams.getInterfaceIpv4() == std::string(srcIp);
@@ -696,8 +706,18 @@ void UdpIpv6Scanner::scan() {
                 uint16_t udpDstPort = ntohs(innerUdp->dest);
             
                 char srcAddrStr[INET6_ADDRSTRLEN], dstAddrStr[INET6_ADDRSTRLEN];
-                inet_ntop(AF_INET6, origSrcIp, srcAddrStr, sizeof(srcAddrStr));
-                inet_ntop(AF_INET6, origDstIp, dstAddrStr, sizeof(dstAddrStr));
+                if(inet_ntop(AF_INET6, origSrcIp, srcAddrStr, sizeof(srcAddrStr)) == nullptr){
+                    this->closeSocket(fdSock);
+                    this->closeEpoll(epollFd);
+                    this->closeSocket(icmp);
+                    throw std::runtime_error("Inet_ntop failed!");
+                }
+                if(inet_ntop(AF_INET6, origDstIp, dstAddrStr, sizeof(dstAddrStr)) == nullptr){
+                    this->closeSocket(fdSock);
+                    this->closeEpoll(epollFd);
+                    this->closeSocket(icmp);
+                    throw std::runtime_error("Inet_ntop failed!");
+                }
                 
                 // Check validity of received packet
                 bool matchPorts = (udpSrcPort == srcPort && udpDstPort == port);
