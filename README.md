@@ -269,7 +269,7 @@ nix develop "git+https://git.fit.vutbr.cz/NESFIT/dev-envs.git?dir=ipk#c"
 ```
 
 Část testování probíhala také **lokálně na fyzickém zařízení**, a to za účelem ověření kompatibility s běžným **Wi-Fi připojením** a **IPv6 tunelem (`tun0`)**. Operační systém fyzického stroje je **Ubuntu 64-bit (verze 22.04)**.
-V obou případech, bylpoužit k validaci výsledků **wireshark**
+V obou případech, byl použit k validaci výsledků **Wireshark**.
 
 ### 5.1 Testování nevalidních vstupů
 
@@ -288,8 +288,8 @@ Tento skript byl spuštěn jak na lokálním tak vlastněném fyzickém stroji.
 ### 5.3 Testování na fyzickém stroji
 
 Pro účely testování mimo virtuální prostředí byla využita **VPN síť FIT VUT**, která umožnila zejména testování funkcionality v rámci **IPv6**.
-Dále byla použita veřejně dostupná testovací doména **`scanme.nmap.org`**, kterou poskytuje projekt **Nmap**. Tato doména je určena k ověřování funkčnosti nástrojů pro skenování portů, a je tedy vhodná i pro testování vlastního síťového skeneru.  
-Níže jsou uvedeny ukázky několika testovacích scénářů a odpovídající výstupy programu.[10]
+Dále byla použita veřejně dostupná testovací doména **`scanme.nmap.org`**, kterou poskytuje projekt **Nmap**. Tato doména je určena k ověřování funkčnosti nástrojů pro skenování portů, a je tedy vhodná i pro testování vlastního síťového skeneru.[10]  
+Níže jsou uvedeny ukázky několika testovacích scénářů a odpovídající výstupy programu.
 
 ```bash
 martinzubek@martinzubek-Lenovo-ideapad-700-15ISK:~/Plocha/IPK01$ sudo ./ipk-l4-scan -i tun0 --pt 80,8080 -u 53 scanme.nmap.org
