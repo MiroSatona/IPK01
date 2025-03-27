@@ -636,6 +636,7 @@ void UdpIpv6Scanner::scan() {
             // Create socket destination address for sending
             struct sockaddr_in6 sockDstAddr;
             memset(&sockDstAddr, 0, sizeof(sockDstAddr));
+            sockDstAddr.sin6_family = AF_INET6;
             if (inet_pton(AF_INET6, dstIpv6.c_str(), &sockDstAddr.sin6_addr) != 1) {
                 this->closeSocket(fdSock);
                 this->closeEpoll(epollFd);
