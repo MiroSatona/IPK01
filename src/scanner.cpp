@@ -465,16 +465,16 @@ void UdpIpv4Scanner::scan() {
             udpHeader.check = this->calculateChecksum(datagram.data(), datagramLength);
 
             // Create socket destination address for sending
-            struct sockaddr_in dstAddr;
-            memset(&dstAddr, 0, sizeof(dstAddr));
-            dstAddr.sin_family = AF_INET;
-            dstAddr.sin_port = htons(port);
-            dstAddr.sin_addr.s_addr = inet_addr(dstIpv4.c_str());
+            struct sockaddr_in sockDstAddr;
+            memset(&sockDstAddr, 0, sizeof(sockDstAddr));
+            sockDstAddr.sin_family = AF_INET;
+            sockDstAddr.sin_port = htons(port);
+            sockDstAddr.sin_addr.s_addr = inet_addr(dstIpv4.c_str());
             // Flag for get ICMP packet
             bool getIcmp = false;
 
             // Send packet
-            if (sendto(fdSock, (struct udphdr*) &udpHeader, sizeof(struct udphdr), 0, (struct sockaddr*)&dstAddr, sizeof(dstAddr)) == -1) {
+            if (sendto(fdSock, (struct udphdr*) &udpHeader, sizeof(struct udphdr), 0, (struct sockaddr*)&sockDstAddr, sizeof(sockDstAddr)) == -1) {
                 this->closeSocket(fdSock);
                 this->closeEpoll(epollFd);
                 this->closeSocket(icmp);
@@ -634,11 +634,9 @@ void UdpIpv6Scanner::scan() {
             udpHeader.check = this->calculateChecksum(datagram.data(), datagramLength);
 
             // Create socket destination address for sending
-            struct sockaddr_in6 dstAddr;
-            memset(&dstAddr, 0, sizeof(dstAddr));
-            dstAddr.sin6_family = AF_INET6;
-            //dstAddr.sin6_port = htons(port);
-            if (inet_pton(AF_INET6, dstIpv6.c_str(), &dstAddr.sin6_addr) != 1) {
+            struct sockaddr_in6 sockDstAddr;
+            memset(&sockDstAddr, 0, sizeof(sockDstAddr));
+            if (inet_pton(AF_INET6, dstIpv6.c_str(), &sockDstAddr.sin6_addr) != 1) {
                 this->closeSocket(fdSock);
                 this->closeEpoll(epollFd);
                 this->closeSocket(icmp);
@@ -648,12 +646,11 @@ void UdpIpv6Scanner::scan() {
             // Flag for get ICMP packet
             bool getIcmp = false;
             // Send packet
-            if (sendto(fdSock, (struct udphdr*) &udpHeader, sizeof(struct udphdr), 0, (struct sockaddr*)&dstAddr, sizeof(dstAddr)) == -1) {
+            if (sendto(fdSock, (struct udphdr*) &udpHeader, sizeof(struct udphdr), 0, (struct sockaddr*)&sockDstAddr, sizeof(sockDstAddr)) == -1) {
                 close(fdSock);
                 close(epollFd);
                 close(icmp);
                 throw std::runtime_error("Could not send packet!");
-                
             }
 
             // Start timeout
