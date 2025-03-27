@@ -721,7 +721,7 @@ void UdpIpv6Scanner::scan() {
                 
                 // Check validity of received packet
                 bool matchPorts = (udpSrcPort == srcPort && udpDstPort == port);
-                bool matchIcmp = (icmpType == 1 && icmpCode == 4);
+                bool matchIcmp = (icmpType == ICMP6_DST_UNREACH && icmpCode == ICMP6_DST_UNREACH_NOPORT);
                 bool matchIps = (scanParams.getInterfaceIpv6() == std::string(srcAddrStr) && dstIpv6 == std::string(dstAddrStr));
                 
                 // If right packet was received and has right ICMP type then set port like closed
