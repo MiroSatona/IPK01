@@ -39,5 +39,20 @@ test_input:
 # Clean objects and program
 clean:
 	@rm -rf $(PROG) $(OBJ_DIR)
- 
-.PHONY: clean run
+	
+# IPv4 setup, on virtual machine, loop back
+set_virtual_lo_test_4:
+	@cd tests/ports && chmod +x port_test.sh && ./port_test.sh -4
+
+# IPv6 setup, n virutal machine, loop back
+set_virtual_lo_test_6:
+	@cd tests/ports && chmod +x port_test.sh && ./port_test.sh -6
+
+# Clean up testing ipv4
+clean_virtual_lo_test_4:
+	@cd tests/ports && chmod +x port_clean.sh && ./port_clean.sh -4
+	
+clean_virtual_lo_test_6:
+	@cd tests/ports && chmod +x port_clean.sh && ./port_clean.sh -6
+	
+.PHONY: clean run set_virtual_lo_test_4 set_virtual_lo_test_6 clean_virtual_lo_test_4 clean_virtual_lo_test_6
